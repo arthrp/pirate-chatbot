@@ -60,7 +60,17 @@ while (true) {
     const last = result.messages[result.messages.length - 1];
     const content = typeof last.content === "string"
       ? last.content
-      : last.content.map((p: any) => (typeof p === "string" ? p : p.text)).join(" ");
+      : Array.isArray(last.content)
+        ? last.content
+            .map((p: unknown) => {
+              if (typeof p === "string") return p;
+              if (p && typeof p === "object" && "text" in p && typeof (p as { text?: unknown }).text === "string") {
+                return (p as { text: string }).text;
+              }
+              return "";
+            })
+            .join(" ")
+        : "";
     console.log(`Pirate: ${content}`);
   } catch (err) {
     console.error("Arrr! Somethin' went wrong, matey:", err);
