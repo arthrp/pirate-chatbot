@@ -1,6 +1,6 @@
 import { ChatMistralAI } from "@langchain/mistralai";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
-import { HumanMessage } from "@langchain/core/messages";
+import { HumanMessage, trimMessages } from "@langchain/core/messages";
 import { START, END, StateGraph, MessagesAnnotation, MemorySaver } from "@langchain/langgraph";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -21,9 +21,16 @@ const prompt = ChatPromptTemplate.fromMessages([
 
 const chain = prompt.pipe(llm);
 
+const trimmer = trimMessages({
+  strategy: "last",
+  maxTokens: 50,
+  tokenCounter: (msgs) => msgs.length
+});
+
 const graph = new StateGraph(MessagesAnnotation)
   .addNode("model", async (state) => {
-    const result = await chain.invoke(state);
+    const trimmedMessages = await trimmer.invoke(state.messages ?? []);
+    const result = await chain.invoke({ messages: trimmedMessages });
     return { messages: [result] };
   })
   .addEdge(START, "model")
